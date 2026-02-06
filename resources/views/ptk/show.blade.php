@@ -1,11 +1,14 @@
 <x-layouts.app>
 @php
+    // Inject ImageUrlService untuk deteksi Tailscale dan serve compressed images
+    $imageService = app(\App\Services\ImageUrlService::class);
+    
     // Prepare images array for Alpine.js
     $galleryImages = $ptk->attachments->filter(function($att) {
         return str_starts_with(strtolower($att->mime ?? ''), 'image/');
-    })->values()->map(function($att) {
+    })->values()->map(function($att) use ($imageService) {
         return [
-            'url' => asset(Storage::url($att->path)),
+            'url' => $imageService->getImageUrl($att->path),
             'caption' => $att->original_name,
         ];
     });
@@ -414,7 +417,10 @@
           @php $imgCounter = 0; @endphp
           @foreach($ptk->attachments as $att)
             @php
-              $url   = asset(Storage::url($att->path));
+              // Gunakan imageService untuk URL yang optimal (compressed untuk Tailscale)
+              $url   = $isImg = str_starts_with(strtolower($att->mime ?? ''), 'image/') 
+                       ? $imageService->getImageUrl($att->path) 
+                       : asset(Storage::url($att->path));
               $mime  = strtolower($att->mime ?? '');
               $isImg = str_starts_with($mime, 'image/');
               
