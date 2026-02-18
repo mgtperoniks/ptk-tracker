@@ -130,7 +130,7 @@
       unset($row);
     @endphp
     <div class="md:col-span-2 border-t border-b my-4 bg-gray-50 dark:bg-gray-800 px-4 py-3 rounded" x-data="{ 
-            needsSparepart: {{ old('mtc.needs_sparepart') ? 'true' : 'true' }},
+            needsSparepart: {{ old('mtc.needs_sparepart', '1') == '1' ? 'true' : 'false' }},
             spList: {{ json_encode(array_values($spData)) }}
          }">
 

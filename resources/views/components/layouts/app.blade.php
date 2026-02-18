@@ -233,7 +233,7 @@
   <script src="{{ asset('vendor/datatables/dataTables.bootstrap5.min.js') }}"></script>
   <script src="{{ asset('vendor/chartjs/chart.umd.min.js') }}"></script>
   <script src="{{ asset('vendor/chartjs/chartjs-plugin-datalabels.min.js') }}"></script>
-  <script src="{{ asset('vendor/alpine/alpine.min.js') }}" defer></script>
+  {{-- Alpine.js is now handled by Vite in resources/js/app.js --}}
 
   @stack('scripts')
 </body>
