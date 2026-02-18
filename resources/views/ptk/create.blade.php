@@ -112,28 +112,27 @@
     {{-- MODUL KHUSUS MTC (Machine) --}}
     {{-- ========================================================= --}}
     @hasanyrole('admin_mtc|kabag_mtc')
-    <div class="md:col-span-2 border-t border-b my-4 bg-gray-50 dark:bg-gray-800 px-4 py-3 rounded" x-data="{ 
-            needsSparepart: true,
-            spList: {{ $errors->any() ? json_encode(array_values(old('spareparts', []))) : '[{name:\'\', spec:\'\', qty:1, supplier:\'\', order_date:\'\', status:\'Requested\', est_arrival_date:\'\', actual_arrival_date:\'\'}]' }}
-         }" x-init="
-            // 1. FORMAT DATE & DEFAULT STATUS
-            spList = spList.map(s => {
-                s.order_date = s.order_date ? String(s.order_date).substring(0, 10) : '';
-                s.est_arrival_date = s.est_arrival_date ? String(s.est_arrival_date).substring(0, 10) : '';
-                s.actual_arrival_date = s.actual_arrival_date ? String(s.actual_arrival_date).substring(0, 10) : '';
-                s.status = s.status || 'Requested';
-                s._key = s._key || (Date.now() + Math.random());
-                return s;
-            });
+    @php
+      $defaultRow = ['name' => '', 'spec' => '', 'qty' => 1, 'supplier' => '', 'order_date' => '', 'status' => 'Requested', 'est_arrival_date' => '', 'actual_arrival_date' => ''];
+      $spData = old('spareparts', [$defaultRow]);
+      if (!is_array($spData) || empty($spData))
+        $spData = [$defaultRow];
 
-            // 2. Ensuring at least one row if empty
-            if (spList.length === 0) {
-                spList.push({
-                    name:'', spec:'', qty:1, supplier:'', order_date:'', status:'Requested', est_arrival_date:'', actual_arrival_date:'',
-                    _key: Date.now() + Math.random()
-                });
-            }
-         ">
+      foreach ($spData as &$row) {
+        $row['_key'] = bin2hex(random_bytes(8));
+        if (!empty($row['order_date']))
+          $row['order_date'] = substr($row['order_date'], 0, 10);
+        if (!empty($row['est_arrival_date']))
+          $row['est_arrival_date'] = substr($row['est_arrival_date'], 0, 10);
+        if (!empty($row['actual_arrival_date']))
+          $row['actual_arrival_date'] = substr($row['actual_arrival_date'], 0, 10);
+      }
+      unset($row);
+    @endphp
+    <div class="md:col-span-2 border-t border-b my-4 bg-gray-50 dark:bg-gray-800 px-4 py-3 rounded" x-data="{ 
+            needsSparepart: {{ old('mtc.needs_sparepart') ? 'true' : 'true' }},
+            spList: {{ json_encode(array_values($spData)) }}
+         }">
 
       <h3 class="font-semibold text-base mb-3 text-indigo-600">B. Spesifik Machine (Maintenance)</h3>
 

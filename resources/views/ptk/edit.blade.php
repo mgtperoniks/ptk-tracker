@@ -208,49 +208,45 @@
     {{-- MODUL KHUSUS MTC (Machine) --}}
     {{-- ========================================================= --}}
     @hasanyrole('admin_mtc|kabag_mtc')
-    <div class="md:col-span-2 border-t border-b my-4 bg-gray-50 dark:bg-gray-800 p-4 rounded" 
-         x-data="{ 
+    @php
+      $dbSpareparts = $ptk->mtcDetail?->spareparts->values()->toArray() ?? [];
+      $spData = old('spareparts', $dbSpareparts);
+
+      // Deduplicate in PHP!
+      $uniqueSp = [];
+      $seenIds = [];
+      foreach ($spData as $sp) {
+        if (isset($sp['id']) && $sp['id']) {
+          if (!in_array($sp['id'], $seenIds)) {
+            $seenIds[] = $sp['id'];
+            $uniqueSp[] = $sp;
+          }
+        } else {
+          $uniqueSp[] = $sp;
+        }
+      }
+
+      // Add _key and format dates
+      foreach ($uniqueSp as &$row) {
+        $row['_key'] = bin2hex(random_bytes(8));
+        if (!empty($row['order_date']))
+          $row['order_date'] = substr($row['order_date'], 0, 10);
+        if (!empty($row['est_arrival_date']))
+          $row['est_arrival_date'] = substr($row['est_arrival_date'], 0, 10);
+        if (!empty($row['actual_arrival_date']))
+          $row['actual_arrival_date'] = substr($row['actual_arrival_date'], 0, 10);
+      }
+      unset($row);
+
+      // Ensure at least one row
+      if (empty($uniqueSp)) {
+        $uniqueSp[] = ['name' => '', 'spec' => '', 'qty' => 1, 'supplier' => '', 'status' => 'Requested', '_key' => bin2hex(random_bytes(8))];
+      }
+    @endphp
+    <div class="md:col-span-2 border-t border-b my-4 bg-gray-50 dark:bg-gray-800 p-4 rounded" x-data="{ 
             needsSparepart: {{ $errors->any() ? (old('mtc.needs_sparepart') ? 'true' : 'false') : ($ptk->mtcDetail?->needs_sparepart ? 'true' : 'false') }},
-            spList: {{ $errors->any() ? json_encode(array_values(old('spareparts', []))) : json_encode($ptk->mtcDetail?->spareparts->values() ?? []) }}
-         }"
-         x-init="
-            console.log('Original Count:', spList.length);
-            
-            // 1. FORMAT DATE & DEFAULT STATUS
-            spList = spList.map(s => {
-                s.order_date = s.order_date ? String(s.order_date).substring(0, 10) : '';
-                s.est_arrival_date = s.est_arrival_date ? String(s.est_arrival_date).substring(0, 10) : '';
-                s.actual_arrival_date = s.actual_arrival_date ? String(s.actual_arrival_date).substring(0, 10) : '';
-                s.status = s.status || 'Requested';
-                return s;
-            });
-
-            // 2. AGGRESSIVE DEDUPLICATION
-            // Hanya simpan item jika ID-nya belum pernah ada di Map.
-            // Item tanpa ID dianggap unik.
-            const uniqueMap = new Map();
-            const cleanList = [];
-            
-            spList.forEach(item => {
-                if (item.id) {
-                    if (!uniqueMap.has(item.id)) {
-                        uniqueMap.set(item.id, true);
-                        cleanList.push(item);
-                    }
-                } else {
-                    // Item baru (belum save DB) -> simpan
-                    cleanList.push(item);
-                }
-            });
-            
-            spList = cleanList;
-            console.log('Deduped Count:', spList.length);
-
-            // 3. Ensure at least one row if empty
-            if(spList.length === 0) {
-                spList.push({name:'', spec:'', qty:1, supplier:'', order_date:'', status:'Requested', est_arrival_date:'', actual_arrival_date:''});
-            }
-         ">
+            spList: {{ json_encode(array_values($uniqueSp)) }}
+         }">
 
       <h3 class="font-semibold text-base mb-3 text-indigo-600">B. Spesifik Machine (Maintenance)</h3>
 
@@ -310,7 +306,7 @@
               </tr>
             </thead>
             <tbody>
-              <template x-for="(row, index) in spList" :key="row.id ? row.id : ('new_' + index)">
+              <template x-for="(row, index) in spList" :key="row._key">
                 <tr>
                   <td class="p-1">
                     <input type="hidden" :name="'spareparts['+index+'][id]'" x-model="row.id">
@@ -330,8 +326,7 @@
                       class="w-full border p-1 rounded min-w-[100px]">
                   </td>
                   <td class="p-1">
-                    <input type="date" :name="'spareparts['+index+'][order_date]'"
-                      x-model="row.order_date"
+                    <input type="date" :name="'spareparts['+index+'][order_date]'" x-model="row.order_date"
                       class="w-full border p-1 rounded">
                   </td>
                   <td class="p-1">
@@ -344,14 +339,12 @@
                     </select>
                   </td>
                   <td class="p-1">
-                    <input type="date" :name="'spareparts['+index+'][est_arrival_date]'"
-                      x-model="row.est_arrival_date"
+                    <input type="date" :name="'spareparts['+index+'][est_arrival_date]'" x-model="row.est_arrival_date"
                       class="w-full border p-1 rounded">
                   </td>
                   <td class="p-1">
                     <input type="date" :name="'spareparts['+index+'][actual_arrival_date]'"
-                      x-model="row.actual_arrival_date"
-                      class="w-full border p-1 rounded">
+                      x-model="row.actual_arrival_date" class="w-full border p-1 rounded">
                   </td>
                   <td class="p-1 text-center">
                     <button type="button" @click="spList.splice(index, 1)"
@@ -362,7 +355,8 @@
             </tbody>
           </table>
         </div>
-        <button type="button" @click="spList.push({name:'', spec:'', qty:1, supplier:'', status:'Requested', order_date:'', est_arrival_date:'', actual_arrival_date:''})"
+        <button type="button"
+          @click="spList.push({name:'', spec:'', qty:1, supplier:'', status:'Requested', order_date:'', est_arrival_date:'', actual_arrival_date:'', _key: (Date.now() + Math.random())})"
           class="mt-2 text-sm text-blue-600 hover:underline">+ Tambah Baris</button>
       </div>
 
@@ -374,7 +368,7 @@
           <label class="block">
             <span class="block text-sm font-medium mb-1">Tanggal Pemasangan</span>
             <input type="date" name="mtc[installation_date]"
-              value="{{ old('mtc.installation_date', $ptk->mtcDetail->installation_date ?? '') }}"
+              value="{{ old('mtc.installation_date', optional($ptk->mtcDetail->installation_date)->format('Y-m-d')) }}"
               class="w-full border p-2 rounded">
           </label>
           <label class="block">
