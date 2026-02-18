@@ -15,6 +15,7 @@ return [
         'admin_qc' => 'kabag_qc',
         'admin_hr' => 'manager_hr',
         'admin_k3' => 'manager_hr',
+        'admin_mtc' => 'kabag_mtc',
 
         // fallback jika role creator tidak ada di mapping
         '*' => 'director',

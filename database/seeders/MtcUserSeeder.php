@@ -18,7 +18,7 @@ class MtcUserSeeder extends Seeder
             ['email' => 'kabagmtc@peroniks.com'],
             [
                 'name' => 'Kabag Maintenance',
-                'password' => Hash::make('password'),
+                'password' => Hash::make('password123'),
                 'department_id' => $dept->id,
             ]
         );
@@ -29,7 +29,7 @@ class MtcUserSeeder extends Seeder
             ['email' => 'adminmtc@peroniks.com'],
             [
                 'name' => 'Admin Maintenance',
-                'password' => Hash::make('password'),
+                'password' => Hash::make('password123'),
                 'department_id' => $dept->id,
             ]
         );

@@ -470,8 +470,8 @@ class PTKController extends Controller
 
         if ($request->has('spareparts') && $mtcData['needs_sparepart']) {
             foreach ($request->input('spareparts') as $sp) {
-                // Ignore empty rows if any
-                if (empty($sp['name']))
+                // Ignore empty rows if any (and trim name to be safe)
+                if (empty($sp['name']) || empty(trim($sp['name'])))
                     continue;
 
                 $detail->spareparts()->create($sp);

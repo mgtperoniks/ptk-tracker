@@ -30,5 +30,12 @@ class DatabaseSeeder extends Seeder
         if (class_exists(PTKInitSeeder::class)) {
             $this->call(PTKInitSeeder::class);
         }
+
+        /**
+         * Jalankan seeder MTC User
+         */
+        if (class_exists(MtcUserSeeder::class)) {
+            $this->call(MtcUserSeeder::class);
+        }
     }
 }

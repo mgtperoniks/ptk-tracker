@@ -67,6 +67,14 @@
       width: 50%;
     }
 
+    .grid-mtc td:first-child {
+      width: 30%;
+    }
+
+    .grid-mtc td:last-child {
+      width: 70%;
+    }
+
     /* Status */
     .status {
       font-weight: 600;
@@ -241,28 +249,30 @@
       </table>
     @endif
 
-    <table class="grid2 mb10">
+    {{-- Koreksi & Catatan --}}
+    <table class="mb10 grid-mtc" style="border-collapse: collapse;">
       <tr>
-        <td>
+        <td style="border: 1px solid #d7dbe1; padding: 5px 6px;">
           <strong>4) Koreksi & Perbaikan</strong><br>
           Tgl Pasang: {{ $ptk->mtcDetail->installation_date?->format('d M Y') ?? '-' }}<br>
           Oleh: {{ $ptk->mtcDetail->repaired_by ?? '-' }}
         </td>
-        <td>
+        <td style="border: 1px solid #d7dbe1; padding: 5px 6px;">
           <strong>Catatan Teknis</strong><br>
           {!! nl2br(e($ptk->mtcDetail->technical_notes ?? '-')) !!}
         </td>
       </tr>
     </table>
 
-    <table class="grid2 mb10">
+    {{-- Hasil Uji Coba --}}
+    <table class="mb10 grid-mtc" style="border-collapse: collapse;">
       <tr>
-        <td>
+        <td style="border: 1px solid #d7dbe1; padding: 5px 6px;">
           <strong>5) Hasil Uji Coba</strong><br>
           Status Akhir: {{ strtoupper($ptk->mtcDetail->machine_status_after ?? '-') }}<br>
           Running Hours: {{ $ptk->mtcDetail->trial_hours ?? '-' }} jam
         </td>
-        <td>
+        <td style="border: 1px solid #d7dbe1; padding: 5px 6px;">
           <strong>Pengamatan</strong><br>
           {!! nl2br(e($ptk->mtcDetail->trial_result ?? '-')) !!}
         </td>
@@ -359,6 +369,7 @@
     $roleStage1 = $u1 && method_exists($u1, 'roles') ? ($u1->roles->pluck('name')->first() ?? null) : null;
     $stage1RoleFile = match ($roleStage1) {
       'kabag_qc' => $signDir . '/kabag_qc.png',
+      'kabag_mtc' => $signDir . '/kabag_mtc.png',
       'manager_hr' => $signDir . '/manager_hr.png',
       default => $signDir . '/kabag_qc.png',
     };

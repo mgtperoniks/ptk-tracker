@@ -114,24 +114,24 @@
     @hasanyrole('admin_mtc|kabag_mtc')
     <div class="md:col-span-2 border-t border-b my-4 bg-gray-50 dark:bg-gray-800 px-4 py-3 rounded" x-data="{ 
             needsSparepart: true,
-            spList: {{ $errors->any() ? json_encode(array_values(old('spareparts', []))) : '[{name:\'\', spec:\'\', qty:1, supplier:\'\', order_date:\'\', status:\'Requested\', est_arrival_date:\'\', actual_arrival_date:\'\'}]' }},
-            
-            addRow() {
-                this.spList.push({
-                    name:'', spec:'', qty:1, supplier:'', order_date:'', status:'Requested', est_arrival_date:'', actual_arrival_date:'',
-                    _key: Date.now() + Math.random() // Unique key for rendering stability
-                });
-            },
-            removeRow(index) {
-                this.spList.splice(index, 1);
-            }
+            spList: {{ $errors->any() ? json_encode(array_values(old('spareparts', []))) : '[{name:\'\', spec:\'\', qty:1, supplier:\'\', order_date:\'\', status:\'Requested\', est_arrival_date:\'\', actual_arrival_date:\'\'}]' }}
          }" x-init="
-            // Ensure at least one row on load if empty
+            // 1. FORMAT DATE & DEFAULT STATUS
+            spList = spList.map(s => {
+                s.order_date = s.order_date ? String(s.order_date).substring(0, 10) : '';
+                s.est_arrival_date = s.est_arrival_date ? String(s.est_arrival_date).substring(0, 10) : '';
+                s.actual_arrival_date = s.actual_arrival_date ? String(s.actual_arrival_date).substring(0, 10) : '';
+                s.status = s.status || 'Requested';
+                s._key = s._key || (Date.now() + Math.random());
+                return s;
+            });
+
+            // 2. Ensuring at least one row if empty
             if (spList.length === 0) {
-                addRow();
-            } else {
-                // Add keys to existing items if missing (e.g. from old input)
-                spList = spList.map(item => ({ ...item, _key: item._key || (Date.now() + Math.random()) }));
+                spList.push({
+                    name:'', spec:'', qty:1, supplier:'', order_date:'', status:'Requested', est_arrival_date:'', actual_arrival_date:'',
+                    _key: Date.now() + Math.random()
+                });
             }
          ">
 
@@ -235,15 +235,17 @@
                       x-model="row.actual_arrival_date" class="w-full border p-1 rounded">
                   </td>
                   <td class="p-1 text-center">
-                    <button type="button" @click="removeRow(index)" class="text-red-600 hover:text-red-800">x</button>
+                    <button type="button" @click="spList.splice(index, 1)"
+                      class="text-red-600 hover:text-red-800">x</button>
                   </td>
                 </tr>
               </template>
             </tbody>
           </table>
         </div>
-        <button type="button" @click="addRow()" class="mt-2 text-sm text-blue-600 hover:underline">+ Tambah
-          Baris</button>
+        <button type="button"
+          @click="spList.push({name:'', spec:'', qty:1, supplier:'', order_date:'', status:'Requested', est_arrival_date:'', actual_arrival_date:'', _key: (Date.now() + Math.random())})"
+          class="mt-2 text-sm text-blue-600 hover:underline">+ Tambah Baris</button>
       </div>
 
       {{-- E. Koreksi & Perbaikan (Sparepart datang / Langsung) --}}

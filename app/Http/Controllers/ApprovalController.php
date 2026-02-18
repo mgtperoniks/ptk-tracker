@@ -20,7 +20,7 @@ class ApprovalController extends Controller
         $u = auth()->user();
 
         // Stage 1 → Waiting Director
-        if ($u->hasAnyRole(['kabag_qc', 'manager_hr'])) {
+        if ($u->hasAnyRole(['kabag_qc', 'manager_hr', 'kabag_mtc'])) {
             abort_unless(
                 $ptk->status === PTK::STATUS_SUBMITTED && is_null($ptk->approved_stage1_at),
                 403,
@@ -30,7 +30,7 @@ class ApprovalController extends Controller
             $ptk->update([
                 'approved_stage1_by' => $u->id,
                 'approved_stage1_at' => now(),
-                'status'             => PTK::STATUS_WAITING_DIRECTOR,
+                'status' => PTK::STATUS_WAITING_DIRECTOR,
             ]);
 
             // audit (lewati jika helper tidak tersedia)
@@ -56,7 +56,7 @@ class ApprovalController extends Controller
             $ptk->update([
                 'approved_stage2_by' => $u->id,
                 'approved_stage2_at' => now(),
-                'status'             => PTK::STATUS_COMPLETED,
+                'status' => PTK::STATUS_COMPLETED,
             ]);
 
             if (function_exists('\activity')) {
@@ -88,7 +88,7 @@ class ApprovalController extends Controller
         ]);
 
         // Stage 1 reject oleh Kabag/Manager
-        if ($u->hasAnyRole(['kabag_qc', 'manager_hr'])) {
+        if ($u->hasAnyRole(['kabag_qc', 'manager_hr', 'kabag_mtc'])) {
             abort_unless(
                 $ptk->status === PTK::STATUS_SUBMITTED || $ptk->status === PTK::STATUS_WAITING_DIRECTOR,
                 403,
@@ -96,11 +96,11 @@ class ApprovalController extends Controller
             );
 
             $ptk->update([
-                'last_reject_stage'  => 'stage1',
+                'last_reject_stage' => 'stage1',
                 'last_reject_reason' => $data['reason'],
-                'last_reject_by'     => $u->id,
-                'last_reject_at'     => now(),
-                'status'             => PTK::STATUS_IN_PROGRESS, // kembali ke admin
+                'last_reject_by' => $u->id,
+                'last_reject_at' => now(),
+                'status' => PTK::STATUS_IN_PROGRESS, // kembali ke admin
             ]);
 
             if (function_exists('\activity')) {
@@ -123,11 +123,11 @@ class ApprovalController extends Controller
             );
 
             $ptk->update([
-                'last_reject_stage'  => 'stage2',
+                'last_reject_stage' => 'stage2',
                 'last_reject_reason' => $data['reason'],
-                'last_reject_by'     => $u->id,
-                'last_reject_at'     => now(),
-                'status'             => PTK::STATUS_IN_PROGRESS,
+                'last_reject_by' => $u->id,
+                'last_reject_at' => now(),
+                'status' => PTK::STATUS_IN_PROGRESS,
             ]);
 
             if (function_exists('\activity')) {
