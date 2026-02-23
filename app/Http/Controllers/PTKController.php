@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Imports\PTKImport;
-use App\Models\{PTK, Department, Category, User};
+use App\Models\{PTK, Department, Category, User, Attachment};
 use App\Services\AttachmentService;
 use App\Support\DeptScope;
 use Illuminate\Contracts\View\View;
@@ -203,10 +203,13 @@ class PTKController extends Controller
         $inProgress = (clone $base)->where('status', 'In Progress')
             ->orderBy('created_at')->limit(self::KANBAN_LIMIT)->get();
 
+        $approval = (clone $base)->whereIn('status', ['Submitted', 'Waiting Director'])
+            ->orderBy('updated_at')->limit(self::KANBAN_LIMIT)->get();
+
         $completed = (clone $base)->where('status', 'Completed')
             ->latest()->limit(self::KANBAN_LIMIT)->get();
 
-        return view('ptk.kanban', compact('notStarted', 'inProgress', 'completed'));
+        return view('ptk.kanban', compact('notStarted', 'inProgress', 'approval', 'completed'));
     }
 
     # =========================================================
@@ -449,6 +452,50 @@ class PTKController extends Controller
             'spareparts.*.est_arrival_date' => 'nullable|date',
             'spareparts.*.actual_arrival_date' => 'nullable|date',
         ];
+    }
+
+    public function updateAttachments(Request $request, PTK $ptk): RedirectResponse
+    {
+        $this->authorize('update', $ptk);
+
+        $data = $request->validate([
+            'attachments' => 'required|array',
+            'attachments.*.id' => 'required|exists:attachments,id',
+            'attachments.*.caption' => 'nullable|string|max:255',
+            'attachments.*.is_for_pdf' => 'nullable|boolean',
+            'attachments.*.sort_order' => 'nullable|integer|min:0|max:100',
+        ]);
+
+        foreach ($data['attachments'] as $attData) {
+            $attachment = Attachment::findOrFail($attData['id']);
+
+            // Security check: attachment must belong to this PTK
+            if ($attachment->ptk_id !== $ptk->id) {
+                continue;
+            }
+
+            $attachment->update([
+                'caption' => $attData['caption'] ?? null,
+                'is_for_pdf' => (bool) ($attData['is_for_pdf'] ?? false),
+                'sort_order' => (int) ($attData['sort_order'] ?? 0),
+            ]);
+        }
+
+        // Hardening: Normalize sort_order for strictly unique and continuous sequence (1, 2, 3...)
+        $selected = $ptk->attachments()->where('is_for_pdf', true)
+            ->orderBy('sort_order', 'asc')
+            ->orderBy('id', 'asc')
+            ->get();
+
+        $i = 1;
+        foreach ($selected as $att) {
+            $att->update(['sort_order' => $i++]);
+        }
+
+        // Cleanup: Reset sort_order to 0 for those not participating in PDF
+        $ptk->attachments()->where('is_for_pdf', false)->update(['sort_order' => 0]);
+
+        return back()->with('ok', 'Pengaturan galeri PDF berhasil disimpan.');
     }
 
     private function storeMtcDetails(PTK $ptk, Request $request): void

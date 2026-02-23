@@ -1,4 +1,5 @@
 <x-layouts.app>
+
 @php
     // Inject ImageUrlService untuk deteksi Tailscale dan serve compressed images
     $imageService = app(\App\Services\ImageUrlService::class);
@@ -8,43 +9,49 @@
         return str_starts_with(strtolower($att->mime ?? ''), 'image/');
     })->values()->map(function($att) use ($imageService) {
         return [
+            'id' => $att->id,
             'url' => $imageService->getImageUrl($att->path),
-            'caption' => $att->original_name,
+            'original_name' => $att->original_name,
+            'caption' => $att->caption,
+            'is_for_pdf' => (bool)$att->is_for_pdf,
+            'sort_order' => (int)$att->sort_order,
         ];
     });
 @endphp
 
   <div class="space-y-6" 
-       x-data="{ 
-           preview: false, 
-           images: {{ $galleryImages->toJson() }},
-           idx: 0,
-           rotate: 0, 
-           scale: 1,
-           
-           get imgSrc() { return this.images[this.idx]?.url || ''; },
-           get imgCaption() { return this.images[this.idx]?.caption || ''; },
-           
-           next() {
-               if(this.images.length === 0) return;
-               this.idx = (this.idx + 1) % this.images.length;
-               this.resetTransform();
-           },
-           prev() {
-               if(this.images.length === 0) return;
-               this.idx = (this.idx - 1 + this.images.length) % this.images.length;
-               this.resetTransform();
-           },
-           resetTransform() {
-               this.rotate = 0;
-               this.scale = 1;
-           },
-           openIndex(i) {
-               this.idx = i;
-               this.resetTransform();
-               this.preview = true;
-           }
-       }"
+       x-data="{            
+            preview: false, 
+            manageModal: false,
+            images: {{ $galleryImages->toJson() }},
+            idx: 0,
+            rotate: 0, 
+            scale: 1,
+            get imgSrc() { return this.images[this.idx]?.url || ''; },
+            get imgCaption() { 
+                let img = this.images[this.idx];
+                return img ? (img.caption || img.original_name) : ''; 
+            },
+            next() {
+                if(this.images.length === 0) return;
+                this.idx = (this.idx + 1) % this.images.length;
+                this.resetTransform();
+            },
+            prev() {
+                if(this.images.length === 0) return;
+                this.idx = (this.idx - 1 + this.images.length) % this.images.length;
+                this.resetTransform();
+            },
+            resetTransform() {
+                this.rotate = 0;
+                this.scale = 1;
+            },
+            openIndex(i) {
+                this.idx = i;
+                this.resetTransform();
+                this.preview = true;
+            }
+        }"
        @keydown.escape.window="preview=false; resetTransform();"
        @keydown.right.window="if(preview) next()"
        @keydown.left.window="if(preview) prev()"
@@ -410,14 +417,23 @@
 
     {{-- Lampiran --}}
     <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow">
-      <h2 class="font-semibold mb-3">Lampiran</h2>
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-semibold">Lampiran</h2>
+        
+        @can('update', $ptk)
+          <button @click="manageModal = true" class="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2 shadow-sm font-semibold">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+            Manage PDF Gallery
+          </button>
+        @endcan
+      </div>
 
       @if($ptk->attachments->count())
         <ul class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
           @php $imgCounter = 0; @endphp
           @foreach($ptk->attachments as $att)
             @php
-              // Gunakan imageService untuk URL yang optimal (compressed untuk Tailscale)
+              // Gunakan imageService for URL yang optimal (compressed for Tailscale)
               $url   = $isImg = str_starts_with(strtolower($att->mime ?? ''), 'image/') 
                        ? $imageService->getImageUrl($att->path) 
                        : asset(Storage::url($att->path));
@@ -469,8 +485,8 @@
                 </a>
               @endif
 
-              <div class="mt-1 text-xs truncate text-gray-700 dark:text-gray-200" title="{{ $att->original_name }}">
-                {{ $att->original_name }}
+              <div class="mt-1 text-xs truncate text-gray-700 dark:text-gray-200" title="{{ $att->caption ?? $att->original_name }}">
+                {{ $att->caption ?? $att->original_name }}
               </div>
             </li>
           @endforeach
@@ -526,8 +542,8 @@
               <img
                 :src="imgSrc"
                 :alt="imgCaption"
-                class="block object-contain select-none"
-                style="max-width: 90vw; max-height: 85vh; user-select: none;"
+                class="block object-contain select-none shadow-2xl rounded-lg"
+                style="max-width: 70vw; max-height: 50vh; user-select: none; border: 4px solid rgba(255,255,255,0.1);"
               />
             </div>
         </div>
@@ -592,6 +608,77 @@
             </div>
         </div>
     </div>
+
+    {{-- MODAL: MANAGE PDF GALLERY --}}
+    <div
+      x-show="manageModal"
+      x-transition.opacity
+      x-cloak
+      class="fixed inset-0 z-[9995] flex items-center justify-center p-4"
+      style="background-color: rgba(0,0,0,0.5);"
+    >
+        <div 
+          class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden"
+          @click.away="manageModal = false"
+        >
+            {{-- Header --}}
+            <div class="px-6 py-4 border-b dark:border-gray-700 flex items-center justify-between bg-indigo-50 dark:bg-indigo-900/20">
+                <div>
+                   <h3 class="font-bold text-gray-900 dark:text-white">Manage PDF Gallery</h3>
+                   <p class="text-xs text-gray-500 mt-0.5">Pilih maksimal 6 foto untuk ditampilkan di PDF export.</p>
+                </div>
+                <button @click="manageModal = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            {{-- Body: Scrollable with Max Height --}}
+            <form action="{{ route('ptk.attachments.bulk', $ptk) }}" method="POST" class="flex flex-col flex-1 overflow-hidden">
+                @csrf
+                <div id="gallery-container" class="flex-1 overflow-y-auto p-3 space-y-1 bg-gray-50 dark:bg-gray-950/30" style="max-height: 60vh;">
+                    <template x-for="(img, index) in images" :key="img.id">
+                        <div class="flex items-center gap-3 p-2 rounded border dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm transition hover:border-indigo-400">
+                            <input type="hidden" :name="`attachments[${index}][id]`" :value="img.id">
+                            
+                            {{-- Ultra-compact Thumbnail --}}
+                            <div class="flex-shrink-0 rounded overflow-hidden border dark:border-gray-700 bg-black flex items-center justify-center shadow-inner" style="min-width: 50px !important; width: 50px !important; height: 50px !important;">
+                                <img :src="img.url" class="max-w-full max-h-full object-contain">
+                            </div>
+
+                            {{-- Row Controls --}}
+                            <div class="flex-1 flex flex-wrap md:flex-nowrap items-center gap-3">
+                                {{-- Checkbox --}}
+                                <div class="flex items-center min-w-[70px]">
+                                    <input type="checkbox" :name="`attachments[${index}][is_for_pdf]`" value="1" x-model="img.is_for_pdf" class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
+                                    <span class="ml-2 text-[10px] font-bold text-gray-500 uppercase">PDF</span>
+                                </div>
+
+                                {{-- Caption --}}
+                                <div class="flex-1 min-w-[150px]">
+                                    <input type="text" :name="`attachments[${index}][caption]`" x-model="img.caption" placeholder="Caption..." class="w-full text-[11px] py-1 border-gray-200 dark:border-gray-700 dark:bg-gray-800 rounded focus:ring-1 focus:ring-blue-500">
+                                </div>
+
+                                {{-- Sort (Numerical Input) --}}
+                                <div class="flex items-center gap-2 min-w-[80px] justify-end">
+                                    <span class="text-[9px] font-bold text-gray-400 uppercase leading-none">ORDER</span>
+                                    <input type="number" :name="`attachments[${index}][sort_order]`" x-model.number="img.sort_order" min="0" max="100" class="w-12 text-[11px] py-1 border-gray-200 dark:border-gray-700 dark:bg-gray-800 rounded focus:ring-1 focus:ring-blue-500 text-center font-bold">
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                {{-- Footer: Compact & Colored Buttons --}}
+                <div class="p-4 border-t dark:border-gray-700 flex items-center justify-end gap-3 bg-white dark:bg-gray-900 sticky bottom-0">
+                    <button type="button" @click="manageModal = false" class="px-6 py-2 bg-red-600 text-white rounded-lg text-[11px] font-bold shadow-sm hover:bg-red-700 transition uppercase tracking-wider">
+                        BATAL
+                    </button>
+                    <button type="submit" class="px-10 py-2 bg-blue-600 text-white rounded-lg text-[11px] font-bold shadow-md hover:bg-blue-700 transition transform hover:-translate-y-0.5 uppercase tracking-wider">
+                        SIMPAN
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
   </div>
 </x-layouts.app>
-```

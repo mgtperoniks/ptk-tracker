@@ -22,7 +22,7 @@ use App\Models\{PTK, Attachment};
 |--------------------------------------------------------------------------
 */
 
-Route::get('/', fn () => redirect()->route('dashboard'));
+Route::get('/', fn() => redirect()->route('dashboard'));
 
 Route::middleware('auth')->group(function () {
 
@@ -182,6 +182,9 @@ Route::middleware('auth')->group(function () {
     Route::delete('ptk-attachment/{id}', [PTKAttachmentController::class, 'destroy'])
         ->name('ptk.attachment.delete');
 
+    Route::post('ptk/{ptk}/attachments-bulk', [PTKController::class, 'updateAttachments'])
+        ->name('ptk.attachments.bulk');
+
 });
 
 require __DIR__ . '/auth.php';
@@ -195,19 +198,19 @@ require __DIR__ . '/auth.php';
 Route::get('/verify/{ptk}/{hash}', function (PTK $ptk, string $hash) {
 
     $expected = hash('sha256', json_encode([
-        'id'          => $ptk->id,
-        'number'      => $ptk->number,
-        'status'      => $ptk->status,
-        'due'         => $ptk->due_date?->format('Y-m-d'),
+        'id' => $ptk->id,
+        'number' => $ptk->number,
+        'status' => $ptk->status,
+        'due' => $ptk->due_date?->format('Y-m-d'),
         'approved_at' => $ptk->approved_at?->format('c'),
-        'updated_at'  => $ptk->updated_at?->format('c'),
+        'updated_at' => $ptk->updated_at?->format('c'),
     ]));
 
     return view('verify.result', [
-        'ptk'      => $ptk,
-        'valid'    => hash_equals($expected, $hash),
+        'ptk' => $ptk,
+        'valid' => hash_equals($expected, $hash),
         'expected' => $expected,
-        'hash'     => $hash,
+        'hash' => $hash,
     ]);
 
 })->name('verify.show');

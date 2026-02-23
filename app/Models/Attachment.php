@@ -22,6 +22,8 @@ class Attachment extends Model implements AuditableContract
         'mime',
         'size',
         'uploaded_by',
+        'is_for_pdf',
+        'sort_order',
     ];
 
     /**
@@ -35,6 +37,8 @@ class Attachment extends Model implements AuditableContract
         'mime',
         'size',
         'uploaded_by',
+        'is_for_pdf',
+        'sort_order',
     ];
 
     /**
@@ -44,6 +48,8 @@ class Attachment extends Model implements AuditableContract
         'size' => 'integer',
         'ptk_id' => 'integer',
         'uploaded_by' => 'integer',
+        'is_for_pdf' => 'boolean',
+        'sort_order' => 'integer',
     ];
 
     /**

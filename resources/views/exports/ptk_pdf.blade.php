@@ -107,16 +107,41 @@
     /* naik sedikit agar overlap tulisan */
 
     /* Lampiran */
-    .attachments img {
+    .attachments {
+      table-layout: fixed;
       width: 100%;
-      height: auto;
-      display: block;
+    }
+
+    .attachments td {
+      width: 33.33%;
+      padding: 4px;
+      border: 1px solid #eee;
+      vertical-align: top;
+      background: #fff;
+    }
+
+    .img-container {
+      width: 100%;
+      height: 140px;
+      text-align: center;
+      background: #f9f9f9;
+      overflow: hidden;
+    }
+
+    .attachments img {
+      max-width: 100%;
+      max-height: 140px;
+      display: inline-block;
     }
 
     .caption {
-      font-size: 10px;
-      color: #555;
-      margin-top: 4px;
+      font-size: 9px;
+      color: #777;
+      margin-top: 3px;
+      text-align: center;
+      height: 24px;
+      overflow: hidden;
+      line-height: 1.2;
     }
 
     /* Spacing */
@@ -316,36 +341,36 @@
   @endif
 
   {{-- LAMPIRAN FOTO (maks 6) --}}
-  @php $displayed = $ptk->attachments->take(6); @endphp
+  @php $displayed = $pdfAttachments; @endphp
   @if($displayed->count() > 0)
     <table class="attachments mb10">
       <tr>
-        @foreach($displayed as $i => $att)
+        @foreach($displayed as $att)
           @php
-            // Gunakan path terkompresi dari controller jika ada, 
-            // jika tidak (misal file non-image), skip.
             $path = $compressedImages[$att->id] ?? null;
-
-            // DomPDF requires 'file://' prefix for absolute paths on Linux usually, 
-            // or just absolute path if isRemoteEnabled is false, but we set it true.
-            // Best practice for local files in DomPDF: file:// + absolute path.
             $src = $path ? 'file://' . $path : null;
           @endphp
-          <td style="width:33%; padding:5px;">
-            @if($src)<img src="{{ $src }}" alt="lampiran-{{ $i + 1 }}">@endif
+          <td>
+            @if($src)
+              <div class="img-container">
+                <img src="{{ $src }}" alt="lampiran">
+              </div>
+            @endif
             @if($att->caption)
-            <div class="caption">{{ $att->caption }}</div>@endif
+              <div class="caption">{{ $att->caption }}</div>
+            @endif
           </td>
-          @if(($i + 1) % 3 === 0)
+          @if($loop->iteration % 3 === 0 && !$loop->last)
             </tr>
-          <tr>@endif
+            <tr>
+          @endif
         @endforeach
 
         {{-- filler cell jika tidak kelipatan 3 --}}
         @php $sisa = $displayed->count() % 3; @endphp
         @if($sisa !== 0)
           @for($k = 0; $k < 3 - $sisa; $k++)
-            <td style="width:33%; padding:5px;"></td>
+            <td></td>
           @endfor
         @endif
       </tr>

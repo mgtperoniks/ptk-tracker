@@ -169,7 +169,25 @@ class ExportController extends Controller
 
         // Pre-process images: Compress them and build a map [attachment_id => local_path]
         $compressedImages = [];
-        foreach ($ptk->attachments->take(6) as $att) {
+
+        // 1. Get explicitly selected images
+        $pdfAttachments = $ptk->attachments
+            ->where('is_for_pdf', true)
+            ->sortBy('sort_order')
+            ->take(6);
+
+        // 2. Fallback: If ZERO images selected, automatically take the first 6 images by ID
+        // This ensures the PDF is not empty if the user forgot to manage the gallery.
+        if ($pdfAttachments->isEmpty()) {
+            $pdfAttachments = $ptk->attachments
+                ->filter(function ($att) {
+                    return str_starts_with(strtolower($att->mime ?? ''), 'image/');
+                })
+                ->sortBy('id')
+                ->take(6);
+        }
+
+        foreach ($pdfAttachments as $att) {
             if (str_starts_with(strtolower($att->mime ?? ''), 'image/')) {
                 $fullPath = Storage::disk('public')->path($att->path);
                 // Get compressed local path (cached)
@@ -210,6 +228,7 @@ class ExportController extends Controller
             'signApprover' => $ptk->approved_at ? $signApprover : null,
             'signDirector' => $signDirector,
             'compressedImages' => $compressedImages, // Pass the map
+            'pdfAttachments' => $pdfAttachments,
         ])->setPaper('a4', 'portrait');
 
         $pdf->set_option('isRemoteEnabled', true);

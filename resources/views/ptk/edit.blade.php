@@ -36,21 +36,14 @@
       @enderror
     </div>
 
-    {{-- Status --}}
+    {{-- Status (Read-only) --}}
     <div>
-      <label for="status" class="block text-sm font-medium mb-1">
+      <label class="block text-sm font-medium mb-1">
         Status
       </label>
-      <select id="status" name="status" class="border p-2 rounded w-full">
-        @foreach(['Not Started', 'In Progress', 'Completed'] as $s)
-          <option value="{{ $s }}" @selected(old('status', $ptk->status) === $s)>
-            {{ $s }}
-          </option>
-        @endforeach
-      </select>
-      @error('status')
-        <small class="text-red-600">{{ $message }}</small>
-      @enderror
+      <div class="py-2">
+        <x-ui.stat-badge :status="$ptk->status" />
+      </div>
     </div>
 
     {{-- Kategori --}}
